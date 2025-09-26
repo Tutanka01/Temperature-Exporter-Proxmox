@@ -4,7 +4,9 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-ExecStart=/usr/local/bin/temperature-exporter -listen=:9102 -path=/metrics -hwmon=/sys/class/hwmon -namespace=temp_exporter
+EnvironmentFile=-/etc/default/temperature-exporter
+Environment=LISTEN_ADDR=0.0.0.0:9102
+ExecStart=/usr/local/bin/temperature-exporter -listen=${LISTEN_ADDR} -path=/metrics -hwmon=/sys/class/hwmon -namespace=temp_exporter
 User=nobody
 Group=nogroup
 CapabilityBoundingSet=CAP_DAC_READ_SEARCH

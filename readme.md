@@ -64,29 +64,28 @@ curl -sf http://127.0.0.1:9102/metrics | head
 
 ## Déploiement systemd (hôte Proxmox/Linux)
 
-1) Copier le binaire
+Installation rapide (par défaut écoute sur 0.0.0.0:9102):
 
 ```bash
-# Si vous avez pris le binaire depuis les Releases (Option A):
-# sudo install -m 0755 temperature-exporter-linux-amd64 /usr/local/bin/temperature-exporter
-# ou pour ARM64:
-# sudo install -m 0755 temperature-exporter-linux-arm64 /usr/local/bin/temperature-exporter
+# 1) Installer le binaire
+# - Depuis Releases:
+#   sudo install -m 0755 temperature-exporter-linux-amd64 /usr/local/bin/temperature-exporter
+#   # ou ARM64: sudo install -m 0755 temperature-exporter-linux-arm64 /usr/local/bin/temperature-exporter
+# - Depuis sources:
+#   sudo install -m 0755 bin/temperature-exporter /usr/local/bin/temperature-exporter
 
-# Si vous avez build depuis les sources (Option B):
-sudo install -m 0755 bin/temperature-exporter /usr/local/bin/temperature-exporter
-```
-
-2) Installer le service
-
-```bash
+# 2) Installer le service systemd
 sudo install -m 0644 packaging/temperature-exporter.service /etc/systemd/system/temperature-exporter.service
+
+# 3) (Optionnel) Configurer l'adresse d'écoute via /etc/default/temperature-exporter
+sudo install -m 0644 packaging/temperature-exporter.env.example /etc/default/temperature-exporter
+# Éditez et modifiez LISTEN_ADDR (par défaut: 0.0.0.0:9102)
+
+# 4) Activer et démarrer
 sudo systemctl daemon-reload
 sudo systemctl enable --now temperature-exporter
-```
 
-3) Vérifier
-
-```bash
+# 5) Vérifier
 systemctl status temperature-exporter
 curl -sf http://127.0.0.1:9102/metrics | head
 ```
