@@ -198,6 +198,12 @@ Conseil: sélectionnez les séries qui vous intéressent avec PromQL (ex: filtre
 	- Activez les logs de requêtes pour diagnostiquer: lancez avec `-log-requests` et vérifiez les entrées `GET /metrics -> 200 (...)`.
 	- Ouvrez le port 9102/tcp sur le pare-feu si nécessaire (ou vérifiez les ACLs/VRF/routage).
 
+## Grafana integration
+
+Dans le dossier grafana-template, vous trouverez un exemple de template JSON deja prete a importer dans Grafana.
+
+![Template Grafana](grafana-template/images/image.png)
+
 ## Licence
 
 AGPL. Voir le fichier LICENSE pour plus de détails.
