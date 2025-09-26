@@ -152,4 +152,4 @@ Métriques exposées sur /metrics.
 
 ## Licence
 
-MIT. Voir l’en-tête du dépôt si nécessaire.
+AGPL. Voir le fichier LICENSE pour plus de détails.
