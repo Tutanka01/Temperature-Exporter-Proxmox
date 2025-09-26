@@ -2,19 +2,19 @@ package main
 
 import (
     "bufio"
+    "context"
     "errors"
     "flag"
     "fmt"
     "log"
     "net/http"
     "os"
+    "os/signal"
     "path/filepath"
     "strconv"
     "strings"
-    "time"
-    "context"
-    "os/signal"
     "syscall"
+    "time"
 
     "github.com/prometheus/client_golang/prometheus"
     "github.com/prometheus/client_golang/prometheus/promhttp"
@@ -166,6 +166,27 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
     c.scrapeTime.Collect(ch)
 }
 
+// loggingResponseWriter wraps http.ResponseWriter to capture status code
+type loggingResponseWriter struct {
+    http.ResponseWriter
+    status int
+}
+
+func (lrw *loggingResponseWriter) WriteHeader(code int) {
+    lrw.status = code
+    lrw.ResponseWriter.WriteHeader(code)
+}
+
+func withRequestLogging(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        start := time.Now()
+        lrw := &loggingResponseWriter{ResponseWriter: w, status: 200}
+        next.ServeHTTP(lrw, r)
+        dur := time.Since(start)
+        log.Printf("%s %s -> %d (%s)", r.Method, r.URL.Path, lrw.status, dur)
+    })
+}
+
 func main() {
     var (
         listenAddr = flag.String("listen", ":9102", "Adresse d'écoute HTTP, ex : :9102")
@@ -176,6 +197,7 @@ func main() {
         writeTO     = flag.Duration("write-timeout", 10*time.Second, "Timeout écriture HTTP")
         readHdrTO   = flag.Duration("read-header-timeout", 5*time.Second, "Timeout lecture des en-têtes HTTP")
         idleTO      = flag.Duration("idle-timeout", 30*time.Second, "Timeout idle HTTP")
+        logRequests = flag.Bool("log-requests", false, "Journaliser les requêtes HTTP (méthode, chemin, statut, durée)")
     )
     flag.Parse()
 
@@ -189,10 +211,24 @@ func main() {
         w.WriteHeader(http.StatusOK)
         _, _ = w.Write([]byte("ok"))
     })
+    // Root helper to avoid 404 confusion in browsers
+    mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+        if r.URL.Path != "/" { // keep other paths as 404 to not confuse scraping
+            http.NotFound(w, r)
+            return
+        }
+        w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+        _, _ = fmt.Fprintf(w, "Temperature Exporter\nMetrics: %s\nHealth: /healthz\n", *metricsPath)
+    })
+
+    var handler http.Handler = mux
+    if *logRequests {
+        handler = withRequestLogging(mux)
+    }
 
     srv := &http.Server{
         Addr:              *listenAddr,
-        Handler:           mux,
+        Handler:           handler,
         ReadTimeout:       *timeout,
         WriteTimeout:      *writeTO,
         ReadHeaderTimeout: *readHdrTO,
