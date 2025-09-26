@@ -16,18 +16,45 @@ Métriques principales:
 - temp_exporter_temperature_celsius{chip="…", sensor="…", label="…"}
 - temp_exporter_scrape_duration_seconds
 
-## Installation rapide
+## Installation
 
-Prérequis: Go 1.22+ (pour build) ou Docker si vous préférez conteneuriser.
+Choisissez l’une des deux méthodes ci-dessous.
 
-1) Build local
+### Option A — Binaire depuis GitHub Releases (recommandé)
+
+1) Aller sur la page des releases et télécharger le binaire adapté à votre architecture:
+
+	- https://github.com/Tutanka01/Temperature-Exporter-Proxmox/releases
+	- Fichiers disponibles: `temperature-exporter-linux-amd64`, `temperature-exporter-linux-arm64` et `SHA256SUMS`.
+
+2) Vérifier l’intégrité (fortement conseillé):
+
+```bash
+sha256sum -c SHA256SUMS 2>/dev/null | grep temperature-exporter-linux-$( [ "$(uname -m)" = "x86_64" ] && echo amd64 || echo arm64 )
+```
+
+3) Installer le binaire
+
+```bash
+sudo install -m 0755 temperature-exporter-linux-$( [ "$(uname -m)" = "x86_64" ] && echo amd64 || echo arm64 ) /usr/local/bin/temperature-exporter
+```
+
+4) Lancer pour tester
+
+```bash
+/usr/local/bin/temperature-exporter -listen=":9102"
+```
+
+### Option B — Build depuis les sources
+
+Prérequis: Go 1.22+.
 
 ```bash
 make build
 ./bin/temperature-exporter -listen=":9102"
 ```
 
-2) Test rapide
+Test rapide (quelle que soit l’option):
 
 ```bash
 curl -sf http://127.0.0.1:9102/healthz
@@ -39,6 +66,12 @@ curl -sf http://127.0.0.1:9102/metrics | head
 1) Copier le binaire
 
 ```bash
+# Si vous avez pris le binaire depuis les Releases (Option A):
+# sudo install -m 0755 temperature-exporter-linux-amd64 /usr/local/bin/temperature-exporter
+# ou pour ARM64:
+# sudo install -m 0755 temperature-exporter-linux-arm64 /usr/local/bin/temperature-exporter
+
+# Si vous avez build depuis les sources (Option B):
 sudo install -m 0755 bin/temperature-exporter /usr/local/bin/temperature-exporter
 ```
 
