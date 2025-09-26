@@ -1,0 +1,30 @@
+[Unit]
+Description=Prometheus Temperature Exporter (hwmon)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/temperature-exporter -listen=:9102 -path=/metrics -hwmon=/sys/class/hwmon -namespace=temp_exporter
+User=nobody
+Group=nogroup
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH
+AmbientCapabilities=CAP_DAC_READ_SEARCH
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ReadOnlyPaths=/sys
+ReadWritePaths=
+InaccessiblePaths=/root /home
+LockPersonality=true
+RestrictRealtime=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+SystemCallFilter=@system-service
+
+[Install]
+WantedBy=multi-user.target
