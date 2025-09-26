@@ -150,6 +150,14 @@ Métriques exposées sur /metrics.
 - Erreurs de build:
 	- Vérifiez votre Go >= 1.22; sinon, utilisez le Dockerfile fourni
 
+- Impossible d’accéder en HTTP depuis un autre poste:
+	- Vérifiez que vous utilisez les bons endpoints: `/metrics` et `/healthz` (le chemin `/` affiche juste des infos).
+	- Lancez en écoutant sur toutes interfaces: `-listen="0.0.0.0:9102"` (évitez `127.0.0.1` si accès distant).
+	- Testez en local sur le serveur: `curl -sf http://127.0.0.1:9102/healthz`.
+	- Depuis le poste distant, utilisez `curl -v http://IP:9102/healthz` pour voir s’il y a un refus/timeout.
+	- Activez les logs de requêtes pour diagnostiquer: lancez avec `-log-requests` et vérifiez les entrées `GET /metrics -> 200 (...)`.
+	- Ouvrez le port 9102/tcp sur le pare-feu si nécessaire (ou vérifiez les ACLs/VRF/routage).
+
 ## Licence
 
 AGPL. Voir le fichier LICENSE pour plus de détails.
