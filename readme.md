@@ -6,6 +6,7 @@ Un petit exporter Prometheus, simple et robuste, qui expose les températures du
 - Labels: chip, sensor, label
 - Endpoints: /metrics, /healthz
 - Packaging: Dockerfile distroless, unité systemd, Makefile
+- Sources: /sys/class/hwmon, /sys/class/thermal, et optionnellement `sensors -j` (lm-sensors)
 
 ## Fonctionnement
 
@@ -130,8 +131,15 @@ Métriques exposées sur /metrics.
 - -listen string: adresse d’écoute (par défaut ":9102")
 - -path string: chemin HTTP des métriques (par défaut "/metrics")
 - -hwmon string: base des capteurs (par défaut "/sys/class/hwmon")
+- -thermal string: base des thermal zones (par défaut "/sys/class/thermal")
+- -enable-hwmon bool: activer hwmon (par défaut true)
+- -enable-thermal bool: activer thermal zones (par défaut true)
+- -enable-sensors-cli bool: activer `sensors -j` (lm-sensors requis) (par défaut false)
+- -sensors-cli-path string: chemin de la commande sensors (par défaut "sensors")
+- -sensors-timeout duration: timeout exécution sensors -j (par défaut 2s)
 - -namespace string: préfixe des métriques (par défaut "temp_exporter")
 - timeouts HTTP réglables: -read-timeout, -write-timeout, -read-header-timeout, -idle-timeout
+- -log-requests: logs d’accès HTTP (optionnel)
 
 ## Sécurité et robustesse
 
@@ -146,6 +154,12 @@ Métriques exposées sur /metrics.
 	- Vérifiez la présence de /sys/class/hwmon
 	- Vérifiez les permissions: sur un hôte strict, donnez CAP_DAC_READ_SEARCH au service
 	- Certains environnements virtuels n’exposent pas les capteurs; installez lm-sensors et chargez les modules nécessaires
+	- Essayez également les thermal zones (activées par défaut): `-enable-thermal=true`
+	- Optionnel: activez `sensors -j` si disponible: `-enable-sensors-cli` (paquet lm-sensors requis)
+	- Exemple d’installation des paquets:
+		- Debian/Ubuntu/Proxmox: `apt-get update && apt-get install -y lm-sensors`
+		- RHEL/CentOS/Rocky: `yum install -y lm_sensors`
+		- Alpine: `apk add lm-sensors`
 
 - Erreurs de build:
 	- Vérifiez votre Go >= 1.22; sinon, utilisez le Dockerfile fourni

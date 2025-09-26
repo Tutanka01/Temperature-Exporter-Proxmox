@@ -3,6 +3,7 @@ package main
 import (
     "bufio"
     "context"
+    "encoding/json"
     "errors"
     "flag"
     "fmt"
@@ -10,7 +11,9 @@ import (
     "net/http"
     "os"
     "os/signal"
+    "os/exec"
     "path/filepath"
+    "regexp"
     "strconv"
     "strings"
     "syscall"
@@ -39,14 +42,26 @@ type sensorReading struct {
 // collector implements prometheus.Collector
 type collector struct {
     basePath   string
+    thermalPath string
+    enableHwmon bool
+    enableThermal bool
+    enableSensorsCli bool
+    sensorsCliPath string
+    sensorsTimeout time.Duration
     sensors    *prometheus.GaugeVec
     scrapeTime prometheus.Gauge
 }
 
-func newCollector(basePath string, namespace string) *collector {
+func newCollector(basePath string, thermalPath string, enableHwmon, enableThermal bool, enableSensorsCli bool, sensorsCliPath string, sensorsTimeout time.Duration, namespace string) *collector {
     labels := []string{"chip", "sensor", "label"}
     return &collector{
         basePath: basePath,
+        thermalPath: thermalPath,
+        enableHwmon: enableHwmon,
+        enableThermal: enableThermal,
+        enableSensorsCli: enableSensorsCli,
+        sensorsCliPath: sensorsCliPath,
+        sensorsTimeout: sensorsTimeout,
         sensors: prometheus.NewGaugeVec(prometheus.GaugeOpts{
             Namespace: namespace,
             Name:      "temperature_celsius",
@@ -135,14 +150,128 @@ func discoverSensors(basePath string) ([]sensorReading, error) {
     return sensors, nil
 }
 
+// discoverThermalSensors scans /sys/class/thermal for thermal_zone*/temp
+func discoverThermalSensors(thermalBase string) ([]sensorReading, error) {
+    var sensors []sensorReading
+    entries, err := os.ReadDir(thermalBase)
+    if err != nil {
+        return sensors, err
+    }
+    for _, e := range entries {
+        if !e.IsDir() || !strings.HasPrefix(e.Name(), "thermal_zone") {
+            continue
+        }
+        zoneDir := filepath.Join(thermalBase, e.Name())
+        ttype, _ := readFirstLine(filepath.Join(zoneDir, "type"))
+        // Some systems have trip points; we only read current temp
+        tempPath := filepath.Join(zoneDir, "temp")
+        if _, err := os.Stat(tempPath); err == nil {
+            sensors = append(sensors, sensorReading{
+                chip:   "thermal",
+                name:   ttype,
+                label:  e.Name(),
+                path:   tempPath,
+                factor: 0.001,
+            })
+        }
+    }
+    return sensors, nil
+}
+
+type cliReading struct {
+    chip  string
+    name  string
+    label string
+    value float64
+}
+
+// discoverSensorsCLI runs `sensors -j` and parses temperatures generically.
+func discoverSensorsCLI(bin string, timeout time.Duration) ([]cliReading, error) {
+    ctx, cancel := context.WithTimeout(context.Background(), timeout)
+    defer cancel()
+    cmd := exec.CommandContext(ctx, bin, "-j")
+    out, err := cmd.Output()
+    if err != nil {
+        return nil, err
+    }
+    var root map[string]interface{}
+    if err := json.Unmarshal(out, &root); err != nil {
+        return nil, err
+    }
+    var res []cliReading
+    // regex to match tempN_input
+    re := regexp.MustCompile(`^temp(\d+)_input$`)
+    // walk the structure
+    for chip, v := range root {
+        m, ok := v.(map[string]interface{})
+        if !ok {
+            continue
+        }
+        // second-level: sections like Tctl, Composite, etc.
+        for section, sv := range m {
+            sm, ok := sv.(map[string]interface{})
+            if !ok {
+                continue
+            }
+            // find keys tempN_input
+            for k, val := range sm {
+                match := re.FindStringSubmatch(k)
+                if match == nil {
+                    continue
+                }
+                // parse value as float64
+                var f float64
+                switch tv := val.(type) {
+                case float64:
+                    f = tv
+                case int:
+                    f = float64(tv)
+                case json.Number:
+                    ff, _ := tv.Float64()
+                    f = ff
+                default:
+                    continue
+                }
+                // find optional label in same section
+                idx := match[1]
+                labelKey := fmt.Sprintf("temp%v_label", idx)
+                label := ""
+                if lv, ok := sm[labelKey]; ok {
+                    if s, ok := lv.(string); ok {
+                        label = s
+                    }
+                }
+                res = append(res, cliReading{
+                    chip:  chip,
+                    name:  section,
+                    label: label,
+                    value: f, // already in degree C
+                })
+            }
+        }
+    }
+    return res, nil
+}
+
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
     start := time.Now()
     // for robustness, re-discover each scrape to account for hotplug; for large systems we could cache with ttl
-    sensors, err := discoverSensors(c.basePath)
-    if err != nil {
-        log.Printf("discoverSensors error: %v", err)
+    var sensors []sensorReading
+    if c.enableHwmon {
+        if s, err := discoverSensors(c.basePath); err == nil {
+            sensors = append(sensors, s...)
+        } else {
+            log.Printf("discoverSensors error: %v", err)
+        }
     }
-    // reset gaugevec by recreating a new one each collection is heavy; instead, we use DeletePartialMatch before setting new
+    if c.enableThermal {
+        if s, err := discoverThermalSensors(c.thermalPath); err == nil {
+            sensors = append(sensors, s...)
+        } else {
+            log.Printf("discoverThermalSensors error: %v", err)
+        }
+    }
+    // reset gaugevec by recreating a new one each collection is heavy; instead, we use Reset before setting new
     c.sensors.Reset()
 
     for _, s := range sensors {
@@ -158,6 +287,17 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
         }
         tempC := v * s.factor
         c.sensors.WithLabelValues(s.chip, s.name, s.label).Set(tempC)
+    }
+
+    // Also collect via sensors -j if enabled
+    if c.enableSensorsCli {
+        if readings, err := discoverSensorsCLI(c.sensorsCliPath, c.sensorsTimeout); err == nil {
+            for _, r := range readings {
+                c.sensors.WithLabelValues(r.chip, r.name, r.label).Set(r.value)
+            }
+        } else {
+            log.Printf("discoverSensorsCLI error: %v", err)
+        }
     }
 
     // export metrics
@@ -192,6 +332,12 @@ func main() {
         listenAddr = flag.String("listen", ":9102", "Adresse d'écoute HTTP, ex : :9102")
         metricsPath = flag.String("path", "/metrics", "Chemin HTTP pour exposer les métriques")
         basePath    = flag.String("hwmon", "/sys/class/hwmon", "Chemin de base vers les capteurs hwmon")
+        thermalPath = flag.String("thermal", "/sys/class/thermal", "Chemin de base vers les zones thermiques (thermal zones)")
+        enableHwmon = flag.Bool("enable-hwmon", true, "Activer la lecture via hwmon (/sys/class/hwmon)")
+        enableThermal = flag.Bool("enable-thermal", true, "Activer la lecture via thermal zones (/sys/class/thermal)")
+        enableSensorsCli = flag.Bool("enable-sensors-cli", false, "Activer la lecture via 'sensors -j' (nécessite lm-sensors)")
+        sensorsCliPath = flag.String("sensors-cli-path", "sensors", "Chemin de la commande 'sensors'")
+        sensorsTimeout = flag.Duration("sensors-timeout", 2*time.Second, "Timeout pour l'exécution de 'sensors -j'")
         namespace   = flag.String("namespace", "temp_exporter", "Préfixe des métriques Prometheus")
         timeout     = flag.Duration("read-timeout", 5*time.Second, "Timeout lecture HTTP")
         writeTO     = flag.Duration("write-timeout", 10*time.Second, "Timeout écriture HTTP")
@@ -201,7 +347,7 @@ func main() {
     )
     flag.Parse()
 
-    c := newCollector(*basePath, *namespace)
+    c := newCollector(*basePath, *thermalPath, *enableHwmon, *enableThermal, *enableSensorsCli, *sensorsCliPath, *sensorsTimeout, *namespace)
     reg := prometheus.NewRegistry()
     reg.MustRegister(c)
 
