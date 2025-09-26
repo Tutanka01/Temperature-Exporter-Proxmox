@@ -52,6 +52,8 @@ type collector struct {
     scrapeTime prometheus.Gauge
 }
 
+var sensorsCliWarned bool
+
 func newCollector(basePath string, thermalPath string, enableHwmon, enableThermal bool, enableSensorsCli bool, sensorsCliPath string, sensorsTimeout time.Duration, namespace string) *collector {
     labels := []string{"chip", "sensor", "label"}
     return &collector{
@@ -65,7 +67,7 @@ func newCollector(basePath string, thermalPath string, enableHwmon, enableTherma
         sensors: prometheus.NewGaugeVec(prometheus.GaugeOpts{
             Namespace: namespace,
             Name:      "temperature_celsius",
-            Help:      "Température en degrés Celsius lue depuis /sys/class/hwmon.*",
+            Help:      "Température en degrés Celsius lue depuis les capteurs système (hwmon, thermal, lm-sensors).",
         }, labels),
         scrapeTime: prometheus.NewGauge(prometheus.GaugeOpts{
             Namespace: namespace,
@@ -296,7 +298,10 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
                 c.sensors.WithLabelValues(r.chip, r.name, r.label).Set(r.value)
             }
         } else {
-            log.Printf("discoverSensorsCLI error: %v", err)
+            if !sensorsCliWarned {
+                log.Printf("discoverSensorsCLI error: %v (désactivez -enable-sensors-cli ou installez lm-sensors)", err)
+                sensorsCliWarned = true
+            }
         }
     }
 
@@ -335,7 +340,7 @@ func main() {
         thermalPath = flag.String("thermal", "/sys/class/thermal", "Chemin de base vers les zones thermiques (thermal zones)")
         enableHwmon = flag.Bool("enable-hwmon", true, "Activer la lecture via hwmon (/sys/class/hwmon)")
         enableThermal = flag.Bool("enable-thermal", true, "Activer la lecture via thermal zones (/sys/class/thermal)")
-        enableSensorsCli = flag.Bool("enable-sensors-cli", false, "Activer la lecture via 'sensors -j' (nécessite lm-sensors)")
+    enableSensorsCli = flag.Bool("enable-sensors-cli", true, "Activer la lecture via 'sensors -j' (nécessite lm-sensors)")
         sensorsCliPath = flag.String("sensors-cli-path", "sensors", "Chemin de la commande 'sensors'")
         sensorsTimeout = flag.Duration("sensors-timeout", 2*time.Second, "Timeout pour l'exécution de 'sensors -j'")
         namespace   = flag.String("namespace", "temp_exporter", "Préfixe des métriques Prometheus")

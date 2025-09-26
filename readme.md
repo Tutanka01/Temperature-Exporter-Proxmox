@@ -135,6 +135,7 @@ Métriques exposées sur /metrics.
 - -enable-hwmon bool: activer hwmon (par défaut true)
 - -enable-thermal bool: activer thermal zones (par défaut true)
 - -enable-sensors-cli bool: activer `sensors -j` (lm-sensors requis) (par défaut false)
+- -enable-sensors-cli bool: activer `sensors -j` (lm-sensors requis) (par défaut true)
 - -sensors-cli-path string: chemin de la commande sensors (par défaut "sensors")
 - -sensors-timeout duration: timeout exécution sensors -j (par défaut 2s)
 - -namespace string: préfixe des métriques (par défaut "temp_exporter")
@@ -160,6 +161,32 @@ Métriques exposées sur /metrics.
 		- Debian/Ubuntu/Proxmox: `apt-get update && apt-get install -y lm-sensors`
 		- RHEL/CentOS/Rocky: `yum install -y lm_sensors`
 		- Alpine: `apk add lm-sensors`
+
+## Exemple de sortie des métriques (via lm-sensors)
+
+Exemple réel (extrait) lorsque lm-sensors est installé et `-enable-sensors-cli` actif:
+
+```text
+# HELP temp_exporter_scrape_duration_seconds Durée de la dernière collecte des températures.
+# TYPE temp_exporter_scrape_duration_seconds gauge
+temp_exporter_scrape_duration_seconds 0.018435873
+# HELP temp_exporter_temperature_celsius Température en degrés Celsius lue depuis les capteurs système (hwmon, thermal, lm-sensors).
+# TYPE temp_exporter_temperature_celsius gauge
+temp_exporter_temperature_celsius{chip="bnxt_en-pci-3b00",label="",sensor="temp1"} 62
+temp_exporter_temperature_celsius{chip="bnxt_en-pci-3b01",label="",sensor="temp1"} 62
+temp_exporter_temperature_celsius{chip="coretemp-isa-0000",label="",sensor="Core 0"} 39
+temp_exporter_temperature_celsius{chip="coretemp-isa-0000",label="",sensor="Core 1"} 38
+...
+temp_exporter_temperature_celsius{chip="i350bb-pci-1903",label="",sensor="loc1"} 62
+temp_exporter_temperature_celsius{chip="pch_lewisburg-virtual-0",label="",sensor="temp1"} 49
+```
+
+Explication des labels:
+- chip: l’identifiant du “chip” ou source détectée (ex: coretemp-isa-0000, bnxt_en-pci-3b00). Cela vient de hwmon/lm-sensors.
+- sensor: le nom humainement lisible du capteur (ex: Core 0, Package id 0, temp1). Il provient d’un label/section associé au capteur.
+- label: libellé additionnel si fourni par le driver (souvent vide); selon les systèmes, cela peut contenir un rôle spécifique (Tctl, Tdie, etc.).
+
+Conseil: sélectionnez les séries qui vous intéressent avec PromQL (ex: filtrer uniquement les cores CPU) et ajoutez des alertes selon vos seuils.
 
 - Erreurs de build:
 	- Vérifiez votre Go >= 1.22; sinon, utilisez le Dockerfile fourni
