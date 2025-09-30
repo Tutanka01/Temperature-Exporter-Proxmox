@@ -1,0 +1,26 @@
+global:
+  scrape_interval: 1m
+
+scrape_configs:
+  - job_name: 'prometheus'
+    scrape_interval: 1m
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  - job_name: 'eva-temperature'
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ['X.X.X.251:9102','X.X.X.252:9102','X.X.X.253:9102','X.X.X.250:9102', 'X.X.X.249:9102']
+        labels:
+          role: 'eva'
+          env: 'prod'
+alerting:
+  alertmanagers:
+    - scheme: http
+      static_configs:
+        - targets: [ 'localhost:9093' ]
