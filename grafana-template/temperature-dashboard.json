@@ -24,7 +24,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "aez9n6jccsdmoa"
+        "uid": "fezn7yb65fwn4c"
       },
       "fieldConfig": {
         "defaults": {
@@ -84,7 +84,7 @@
       },
       "gridPos": {
         "h": 10,
-        "w": 12,
+        "w": 24,
         "x": 0,
         "y": 0
       },
@@ -116,13 +116,13 @@
           "refId": "A"
         }
       ],
-      "title": "New panel",
+      "title": "Vue d'ensemble",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "aez9n6jccsdmoa"
+        "uid": "fezn7yb65fwn4c"
       },
       "fieldConfig": {
         "defaults": {
@@ -152,9 +152,9 @@
       },
       "gridPos": {
         "h": 10,
-        "w": 4,
-        "x": 12,
-        "y": 0
+        "w": 5,
+        "x": 0,
+        "y": 10
       },
       "id": 2,
       "options": {
@@ -178,19 +178,223 @@
       "targets": [
         {
           "editorMode": "builder",
-          "expr": "avg(temp_exporter_temperature_celsius{instance=\"192.168.100.2:9102\"})",
+          "expr": "avg(temp_exporter_temperature_celsius{instance=\"X.X.X.251:9102\"})",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Temperature pxmx1",
+      "title": "Temperature eva1",
       "type": "stat"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "aez9n6jccsdmoa"
+        "uid": "fezn7yb65fwn4c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "#EAB839",
+                "value": 45
+              },
+              {
+                "color": "red",
+                "value": 60
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 5,
+        "x": 5,
+        "y": 10
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "editorMode": "builder",
+          "expr": "avg(temp_exporter_temperature_celsius{instance=\"X.X.X.252:9102\"})",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Temperature eva2",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fezn7yb65fwn4c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "#EAB839",
+                "value": 45
+              },
+              {
+                "color": "red",
+                "value": 60
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 5,
+        "x": 10,
+        "y": 10
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "editorMode": "builder",
+          "expr": "avg(temp_exporter_temperature_celsius{instance=\"X.X.X.253:9102\"})",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Temperature eva3",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fezn7yb65fwn4c"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "#EAB839",
+                "value": 45
+              },
+              {
+                "color": "red",
+                "value": 60
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 5,
+        "x": 15,
+        "y": 10
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0",
+      "targets": [
+        {
+          "editorMode": "builder",
+          "expr": "avg(temp_exporter_temperature_celsius{instance=\"X.X.X.250:9102\"})",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Temperature eva4",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fezn7yb65fwn4c"
       },
       "fieldConfig": {
         "defaults": {
@@ -221,10 +425,10 @@
       "gridPos": {
         "h": 10,
         "w": 4,
-        "x": 16,
-        "y": 0
+        "x": 20,
+        "y": 10
       },
-      "id": 3,
+      "id": 6,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -246,17 +450,18 @@
       "targets": [
         {
           "editorMode": "builder",
-          "expr": "avg(temp_exporter_temperature_celsius{instance=\"192.168.100.3:9102\"})",
+          "expr": "avg(temp_exporter_temperature_celsius{instance=\"X.X.X.249:9102\"})",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Temperature pxmx2",
+      "title": "Temperature eva5",
       "type": "stat"
     }
   ],
   "preload": false,
+  "refresh": "auto",
   "schemaVersion": 42,
   "tags": [],
   "templating": {
@@ -270,5 +475,5 @@
   "timezone": "browser",
   "title": "Temperature Pxmx1",
   "uid": "ad9bw5v",
-  "version": 8
+  "version": 9
 }
